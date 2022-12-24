@@ -209,3 +209,7 @@ pictureDisplay = customtkinter.CTkLabel(
 pictureDisplay.pack(pady=10, padx=10, anchor="center")
 
 app.mainloop()
+
+# NOTE, the sintax for getting the output from the .npz file is the following:
+# with np.load('CameraParams.npz') as file:
+#     mtx, dist, rvecs, tvecs = [file[i] for i in ('cameraMatrix','dist','rvecs','tvecs')]
