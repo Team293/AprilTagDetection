@@ -15,6 +15,7 @@ fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter('Testing_apriltag.mp4', apiPreference=0, fourcc=fourcc, fps=video_fps[0],
                          frameSize=(int(width), int(height)))
 
+# test
 options = apriltag.DetectorOptions(families="tag36h11")
 detector = apriltag.Detector(options)
 
