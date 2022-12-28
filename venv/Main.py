@@ -2,7 +2,6 @@ import cv2
 import apriltag
 import numpy as np
 
-
 with np.load('CameraParams.npz') as file:
     cameraMatrix, dist, rvecs, tvecs = [file[i] for i in ('cameraMatrix', 'dist', 'rvecs', 'tvecs')]
 
@@ -16,22 +15,23 @@ fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter('Testing_apriltag.mp4', apiPreference=0, fourcc=fourcc, fps=video_fps[0],
                          frameSize=(int(width), int(height)))
 
+options = apriltag.DetectorOptions(families="tag36h11")
+detector = apriltag.Detector(options)
+
 # Check if camera opened successfully
-if cap.isOpened() == False:
+if not cap.isOpened():
     print("Error opening video stream or file")
 
 # Read until video is completed
 while cap.isOpened():
     # Capture frame-by-frame
     ret, frame = cap.read()
-    if ret == True:
+    if ret:
 
         inputImage = frame
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
         print("[INFO] detecting AprilTags...")
-        options = apriltag.DetectorOptions(families="tag36h11")
-        detector = apriltag.Detector(options)
         results = detector.detect(image)
         print(f"[INFO] {len(results)} total AprilTags detected")
 
