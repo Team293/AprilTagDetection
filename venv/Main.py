@@ -1,5 +1,5 @@
 import cv2
-import apriltag
+from apriltag import DetectorOptions, Detector
 import numpy as np
 
 with np.load('CameraParams.npz') as file:
@@ -15,8 +15,8 @@ fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter('Testing_apriltag.mp4', apiPreference=0, fourcc=fourcc, fps=video_fps[0],
                          frameSize=(int(width), int(height)))
 
-options = apriltag.DetectorOptions(families="tag36h11")
-detector = apriltag.Detector(options)
+options = DetectorOptions(families="tag36h11")
+detector = Detector(options)
 
 # Check if camera opened successfully
 if not cap.isOpened():
