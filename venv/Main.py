@@ -1,5 +1,4 @@
 import cv2
-# from apriltag import DetectorOptions, Detector, _draw_pose
 from dt_apriltags import Detector
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +8,7 @@ with np.load('CameraParams.npz') as file:
 
 aprilCameraMatrix = [cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2]]
 
-cap = cv2.VideoCapture('0001-0080.mp4')
+cap = cv2.VideoCapture("0001-0080.mp4")
 
 video_fps = cap.get(cv2.CAP_PROP_FPS),
 height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -20,6 +19,10 @@ writer = cv2.VideoWriter('apriltag_output.mp4', apiPreference=0, fourcc=fourcc, 
                          frameSize=(int(width), int(height)))
 fig = plt.figure()
 ax = plt.axes(projection='3d')
+ax.set_title("3D scatterplot", pad=25, size=15)
+ax.set_xlabel("X")
+ax.set_ylabel("Y")
+ax.set_zlabel("Z")
 
 # options = DetectorOptions(families="tag36h11")
 detector = Detector(families='tag36h11')
@@ -35,10 +38,15 @@ while cap.isOpened():
     if ret:
 
         inputImage = frame
+
+        h, w = inputImage.shape[:2]
+        newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w, h), 1, (w, h))
+
+        inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
         print("[INFO] detecting AprilTags...")
-        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=.2)
+        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=0.1651)
         # print(results)
         print(f"[INFO] {len(results)} total AprilTags detected")
         print(f"[INFO] Looping over {len(results)} apriltags and getting data")
@@ -94,6 +102,7 @@ while cap.isOpened():
             print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
             # print(f"[DATA] Apriltag position:\n{}")
             ax.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
+            plt.pause(0.01)
 
         # show the output image after AprilTag detection
         print("[INFO] displaying image after overlay")
