@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from time import time
 
 # Edit these variables for config.
-camera_params = 'camera params/CameraParamsElliotWebcam.npz'
+camera_params = 'camera calibration/CameraCalibration.npz'
 webcam = True
 
 video_source = 'Testing_apriltag.mp4'
