@@ -2,3 +2,4 @@ opencv-python
 dt-apriltags
 numpy
 matplotlib
+customtkinter
