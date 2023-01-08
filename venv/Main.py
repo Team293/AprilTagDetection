@@ -26,12 +26,14 @@ width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter(output_file, apiPreference=0, fourcc=fourcc, fps=video_fps[0],
                          frameSize=(int(width), int(height)))
-fig = plt.figure()
-ax = plt.axes(projection='3d')
-ax.set_title("3D scatterplot", pad=25, size=15)
-ax.set_xlabel("X")
-ax.set_ylabel("Y")
-ax.set_zlabel("Z")
+
+if show_graph:
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    ax.set_title("3D scatterplot", pad=25, size=15)
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
 
 # options = DetectorOptions(families="tag36h11")
 detector = Detector(families='tag36h11')
@@ -61,7 +63,8 @@ while capture.isOpened():
         print(f"[INFO] Looping over {len(results)} apriltags and getting data")
         # loop over the AprilTag detection results
         if len(results) == 0:
-            cv2.imshow("Image", inputImage)
+            if not show_graph:
+                cv2.imshow("Image", inputImage)
             writer.write(inputImage)
 
         for r in results:
@@ -110,17 +113,20 @@ while capture.isOpened():
             print(f"[DATA] Detection rotation matrix:\n{poseRotation}")
             print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
             # print(f"[DATA] Apriltag position:\n{}")
-            ax.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
-            plt.pause(0.01)
+            if show_graph:
+                ax.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
+                plt.pause(0.01)
 
         # show the output image after AprilTag detection
         print("[INFO] displaying image after overlay")
-        cv2.imshow("Image", inputImage)
+        if not show_graph:
+            cv2.imshow("Image", inputImage)
         writer.write(inputImage)
 
         # Press Q on keyboard to  exit
-        if cv2.waitKey(25) & 0xFF == ord('q'):
-            break
+        if not show_graph:
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
 
     # Break the loop
     else:
