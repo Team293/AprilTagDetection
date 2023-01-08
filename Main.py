@@ -6,8 +6,8 @@ from time import time
 
 # Edit these variables for config.
 camera_params = 'CameraParamsElliotWebcam.npz'
-webcam = False
-video_source = 'WebcamTest.mp4'
+webcam = True
+video_source = 'Testing_apriltag.mp4'
 output_file = 'apriltag_output.mp4'
 show_graph = False
 undistort_frame = False
@@ -20,7 +20,10 @@ with np.load(camera_params) as file:
 
 aprilCameraMatrix = [cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2]]
 
-capture = cv2.VideoCapture(video_source)
+if webcam:
+    capture = cv2.VideoCapture(0)
+else:
+    capture = cv2.VideoCapture(video_source)
 
 video_fps = capture.get(cv2.CAP_PROP_FPS),
 frame_height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
