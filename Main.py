@@ -50,6 +50,7 @@ while capture.isOpened():
     # Capture frame-by-frame
     ret, frame = capture.read()
     if ret:
+        start_time = time()
 
         inputImage = frame
 
@@ -63,6 +64,7 @@ while capture.isOpened():
         if debug_mode:
             print("[INFO] detecting AprilTags...")
         results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=0.1651)
+
         # print(results)
         if debug_mode:
             print(f"[INFO] {len(results)} total AprilTags detected")
