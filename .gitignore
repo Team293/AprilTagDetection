@@ -1,6 +1,7 @@
 *
 !.gitignore
 !requirements.txt
+!no_image.png
 !Main.py
 !camera_calibration.py
 .idea/*
