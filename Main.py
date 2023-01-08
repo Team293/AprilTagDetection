@@ -57,11 +57,11 @@ while capture.isOpened():
 
         inputImage = frame
 
-        height, width = inputImage.shape[:2]
-        newCameraMatrix, _ = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (width, height), 1, (width, height))
-
         if undistort_frame:
+            height, width = inputImage.shape[:2]
+            newCameraMatrix, _ = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (width, height), 1, (width, height))
             inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
+
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
         if debug_mode:
