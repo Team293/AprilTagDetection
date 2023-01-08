@@ -3,6 +3,6 @@
 !requirements.txt
 !no_image.png
 !Main.py
-!camera_calibration.py
+!camera_calibration_gui.py
 .idea/*
 !*/

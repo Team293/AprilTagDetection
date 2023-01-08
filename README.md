@@ -11,6 +11,7 @@ Install tkinter with:
 
 `pip install tkinter`
 
-If you are on a Debian-based system, you might need to run the following in order to install tkinter:
+If you are on a Debian-based system, you might need to run the following in order to install tkinter and or the following to install pil:
 
 `sudo apt-get install python-tk`
+`sudo apt-get install python3-pil.imagetk`

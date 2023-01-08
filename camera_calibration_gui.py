@@ -138,7 +138,7 @@ def process_images():
     print("\ntvecs :")
     print(tvecs)
 
-    np.savez("CameraParams", cameraMatrix=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+    np.savez("CameraCalibration", cameraMatrix=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
     print("\nCalibration compleat, outputted to file: CameraParams.npz")
 
     outputMessage = customtkinter.CTkLabel(
