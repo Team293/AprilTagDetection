@@ -3,19 +3,28 @@ from dt_apriltags import Detector
 import numpy as np
 import matplotlib.pyplot as plt
 
-with np.load('CameraParams.npz') as file:
+# Edit these variables for config.
+camera_params = 'CameraParamsBlender.npz'
+webcam = False
+video_source = 'Testing_apriltag.mp4'
+output_file = 'apriltag_output.mp4'
+show_graph = False
+undistort_frame = False
+
+# Load camera parameters
+with np.load(camera_params) as file:
     cameraMatrix, dist, rvecs, tvecs = [file[i] for i in ('cameraMatrix', 'dist', 'rvecs', 'tvecs')]
 
 aprilCameraMatrix = [cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2]]
 
-cap = cv2.VideoCapture("0001-0080.mp4")
+capture = cv2.VideoCapture(video_source)
 
-video_fps = cap.get(cv2.CAP_PROP_FPS),
-height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+video_fps = capture.get(cv2.CAP_PROP_FPS),
+height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
 
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-writer = cv2.VideoWriter('apriltag_output.mp4', apiPreference=0, fourcc=fourcc, fps=video_fps[0],
+writer = cv2.VideoWriter(output_file, apiPreference=0, fourcc=fourcc, fps=video_fps[0],
                          frameSize=(int(width), int(height)))
 fig = plt.figure()
 ax = plt.axes(projection='3d')
@@ -28,13 +37,13 @@ ax.set_zlabel("Z")
 detector = Detector(families='tag36h11')
 
 # Check if camera opened successfully
-if not cap.isOpened():
+if not capture.isOpened():
     print("Error opening video stream or file")
 
 # Read until video is completed
-while cap.isOpened():
+while capture.isOpened():
     # Capture frame-by-frame
-    ret, frame = cap.read()
+    ret, frame = capture.read()
     if ret:
 
         inputImage = frame
@@ -119,5 +128,6 @@ while cap.isOpened():
 
 # When everything done, release the video capture object
 writer.release()
-cap.release()
-plt.show()
+capture.release()
+if show_graph:
+    plt.show()
