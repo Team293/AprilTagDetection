@@ -53,7 +53,8 @@ while capture.isOpened():
         h, w = inputImage.shape[:2]
         newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w, h), 1, (w, h))
 
-        inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
+        if undistort_frame:
+            inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
         print("[INFO] detecting AprilTags...")
