@@ -1,8 +1,5 @@
-*
-!.gitignore
-!requirements.txt
-!no_image.png
-!Main.py
-!camera_calibration.py
-.idea/*
-!*/
+camera calibration/
+camera params/
+vision output/
+.idea/
+.env
