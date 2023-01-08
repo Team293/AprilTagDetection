@@ -42,7 +42,12 @@ if show_graph:
     axes.set_zlabel("Z")
 
 # options = DetectorOptions(families="tag36h11")
-detector = Detector(families='tag36h11')
+detector = Detector(
+    families='tag36h11',
+    nthreads=3,
+    quad_decimate=1.0,
+    decode_sharpening=0.5,
+)
 
 # Check if camera opened successfully
 if not capture.isOpened():
