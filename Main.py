@@ -47,6 +47,7 @@ detector = Detector(
     nthreads=3,
     quad_decimate=1.0,
     decode_sharpening=0.5,
+    refine_edges=2,
 )
 
 # Check if camera opened successfully
