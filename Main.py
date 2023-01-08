@@ -2,14 +2,17 @@ import cv2
 from dt_apriltags import Detector
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 
 # Edit these variables for config.
-camera_params = 'CameraParamsBlender.npz'
+camera_params = 'CameraParamsElliotWebcam.npz'
 webcam = False
-video_source = 'Testing_apriltag.mp4'
+video_source = 'WebcamTest.mp4'
 output_file = 'apriltag_output.mp4'
 show_graph = False
 undistort_frame = False
+debug_mode = False
+show_framerate = True
 
 # Load camera parameters
 with np.load(camera_params) as file:
@@ -20,20 +23,20 @@ aprilCameraMatrix = [cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2],
 capture = cv2.VideoCapture(video_source)
 
 video_fps = capture.get(cv2.CAP_PROP_FPS),
-height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
+frame_height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+frame_width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
 
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 writer = cv2.VideoWriter(output_file, apiPreference=0, fourcc=fourcc, fps=video_fps[0],
-                         frameSize=(int(width), int(height)))
+                         frameSize=(int(frame_width), int(frame_height)))
 
 if show_graph:
     fig = plt.figure()
-    ax = plt.axes(projection='3d')
-    ax.set_title("3D scatterplot", pad=25, size=15)
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
+    axes = plt.axes(projection='3d')
+    axes.set_title("3D scatterplot", pad=25, size=15)
+    axes.set_xlabel("X")
+    axes.set_ylabel("Y")
+    axes.set_zlabel("Z")
 
 # options = DetectorOptions(families="tag36h11")
 detector = Detector(families='tag36h11')
@@ -50,18 +53,21 @@ while capture.isOpened():
 
         inputImage = frame
 
-        h, w = inputImage.shape[:2]
-        newCameraMatrix, roi = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (w, h), 1, (w, h))
+        height, width = inputImage.shape[:2]
+        newCameraMatrix, _ = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (width, height), 1, (width, height))
 
         if undistort_frame:
             inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
-        print("[INFO] detecting AprilTags...")
+        if debug_mode:
+            print("[INFO] detecting AprilTags...")
         results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=0.1651)
         # print(results)
-        print(f"[INFO] {len(results)} total AprilTags detected")
-        print(f"[INFO] Looping over {len(results)} apriltags and getting data")
+        if debug_mode:
+            print(f"[INFO] {len(results)} total AprilTags detected")
+            print(f"[INFO] Looping over {len(results)} apriltags and getting data")
+
         # loop over the AprilTag detection results
         if len(results) == 0:
             if not show_graph:
@@ -94,8 +100,8 @@ while capture.isOpened():
             cv2.putText(inputImage, tagFamily, (ptD[0], ptD[1] - 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            x_centered = cX - width / 2
-            y_centered = -1 * (cY - height / 2)
+            x_centered = cX - frame_width / 2
+            y_centered = -1 * (cY - frame_height / 2)
 
             cv2.putText(inputImage, f"Center X coord: {x_centered}", (ptB[0] + 10, ptB[1] - 20),
                         cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
@@ -106,20 +112,30 @@ while capture.isOpened():
             cv2.putText(inputImage, f"Tag ID: {r.tag_id}", (ptC[0] - 70, ptC[1] - 15),
                         cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
 
-            cv2.circle(inputImage, (int((width / 2)), int((height / 2))), 5, (0, 0, 255), 2)
+            cv2.circle(inputImage, (int((frame_width / 2)), int((frame_height / 2))), 5, (0, 0, 255), 2)
 
             # pose = detector.detection_pose(detection=r, camera_params=aprilCameraMatrix, tag_size=8)
             poseRotation = r.pose_R
             poseTranslation = r.pose_t
-            print(f"[DATA] Detection rotation matrix:\n{poseRotation}")
-            print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
-            # print(f"[DATA] Apriltag position:\n{}")
+
+            if debug_mode:
+                print(f"[DATA] Detection rotation matrix:\n{poseRotation}")
+                print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
+                # print(f"[DATA] Apriltag position:\n{}")
+
             if show_graph:
-                ax.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
+                axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
                 plt.pause(0.01)
 
-        # show the output image after AprilTag detection
-        print("[INFO] displaying image after overlay")
+        if debug_mode:
+            # show the output image after AprilTag detection
+            print("[INFO] displaying image after overlay")
+
+        if show_framerate:
+            end_time = time()
+            cv2.putText(inputImage, f"FPS: {1 / (end_time - start_time)}", (0, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+
         if not show_graph:
             cv2.imshow("Image", inputImage)
         writer.write(inputImage)
@@ -129,9 +145,11 @@ while capture.isOpened():
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
 
+
     # Break the loop
     else:
         break
+
 
 # When everything done, release the video capture object
 writer.release()
