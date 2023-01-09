@@ -16,6 +16,7 @@ output_file = 'vision output/test_output.mp4'
 undistort_frame = False
 
 show_graph = False
+tag_id_to_track = 8 # any id of tag, use -1 for all tags.
 debug_mode = False
 show_framerate = True
 
@@ -87,51 +88,54 @@ while capture.isOpened():
 
         # loop over the AprilTag detection results
         if len(results) == 0:
-            if not show_graph:
+            if output_overlay:
                 cv2.imshow("Image", inputImage)
             writer.write(inputImage)
 
         for r in results:
-            # extract the bounding box (x, y)-coordinates for the AprilTag
-            # and convert each of the (x, y)-coordinate pairs to integers
-            (ptA, ptB, ptC, ptD) = r.corners
-            ptB = (int(ptB[0]), int(ptB[1]))
-            ptC = (int(ptC[0]), int(ptC[1]))
-            ptD = (int(ptD[0]), int(ptD[1]))
-            ptA = (int(ptA[0]), int(ptA[1]))
-            # draw the bounding box of the AprilTag detection
-            cv2.line(inputImage, ptA, ptB, (0, 255, 0), 2)
-            cv2.line(inputImage, ptB, ptC, (0, 255, 0), 2)
-            cv2.line(inputImage, ptC, ptD, (0, 255, 0), 2)
-            cv2.line(inputImage, ptD, ptA, (0, 255, 0), 2)
-
-            cv2.circle(inputImage, ptA, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptB, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptC, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptD, 4, (0, 0, 255), -1)
-            # draw the center (x, y)-coordinates of the AprilTag
-            (cX, cY) = (int(r.center[0]), int(r.center[1]))
-            cv2.circle(inputImage, (cX, cY), 5, (0, 0, 255), -1)
-            # draw the tag family on the image
+            # get tag family
             tagFamily = r.tag_family.decode("utf-8")
-            cv2.putText(inputImage, tagFamily, (ptD[0], ptD[1] - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            
+            if output_overlay:
+                # extract the bounding box (x, y)-coordinates for the AprilTag
+                # and convert each of the (x, y)-coordinate pairs to integers
+                (ptA, ptB, ptC, ptD) = r.corners
+                ptB = (int(ptB[0]), int(ptB[1]))
+                ptC = (int(ptC[0]), int(ptC[1]))
+                ptD = (int(ptD[0]), int(ptD[1]))
+                ptA = (int(ptA[0]), int(ptA[1]))
+                # draw the bounding box of the AprilTag detection
+                cv2.line(inputImage, ptA, ptB, (0, 255, 0), 2)
+                cv2.line(inputImage, ptB, ptC, (0, 255, 0), 2)
+                cv2.line(inputImage, ptC, ptD, (0, 255, 0), 2)
+                cv2.line(inputImage, ptD, ptA, (0, 255, 0), 2)
 
-            x_centered = cX - frame_width / 2
-            y_centered = -1 * (cY - frame_height / 2)
+                cv2.circle(inputImage, ptA, 4, (0, 0, 255), -1)
+                cv2.circle(inputImage, ptB, 4, (0, 0, 255), -1)
+                cv2.circle(inputImage, ptC, 4, (0, 0, 255), -1)
+                cv2.circle(inputImage, ptD, 4, (0, 0, 255), -1)
+                # draw the center (x, y)-coordinates of the AprilTag
+                (cX, cY) = (int(r.center[0]), int(r.center[1]))
+                cv2.circle(inputImage, (cX, cY), 5, (0, 0, 255), -1)
+                # draw the tag family on the image
 
-            cv2.putText(inputImage, f"Center X coord: {x_centered}", (ptB[0] + 10, ptB[1] - 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+                cv2.putText(inputImage, tagFamily, (ptD[0], ptD[1] - 15),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-            cv2.putText(inputImage, f"Center Y coord: {y_centered}", (ptB[0] + 10, ptB[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+                x_centered = cX - frame_width / 2
+                y_centered = -1 * (cY - frame_height / 2)
 
-            cv2.putText(inputImage, f"Tag ID: {r.tag_id}", (ptC[0] - 70, ptC[1] - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+                cv2.putText(inputImage, f"Center X coord: {x_centered}", (ptB[0] + 10, ptB[1] - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
 
-            cv2.circle(inputImage, (int((frame_width / 2)), int((frame_height / 2))), 5, (0, 0, 255), 2)
+                cv2.putText(inputImage, f"Center Y coord: {y_centered}", (ptB[0] + 10, ptB[1]),
+                            cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
 
-            # pose = detector.detection_pose(detection=r, camera_params=aprilCameraMatrix, tag_size=8)
+                cv2.putText(inputImage, f"Tag ID: {r.tag_id}", (ptC[0] - 70, ptC[1] - 15),
+                            cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+
+                cv2.circle(inputImage, (int((frame_width / 2)), int((frame_height / 2))), 5, (0, 0, 255), 2)
+
             poseRotation = r.pose_R
             poseTranslation = r.pose_t
 
@@ -139,18 +143,22 @@ while capture.isOpened():
                 print(f"[DATA] Detection rotation matrix:\n{poseRotation}")
                 print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
                 # print(f"[DATA] Apriltag position:\n{}")
-
-            # draw x y z axis
-            # x axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][0] * 100), cY + int(poseRotation[1][0] * 100)), (0, 0, 255), 2)
-            # y axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][1] * 100), cY + int(poseRotation[1][1] * 100)), (0, 255, 0), 2)
-            # z axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][2] * 100), cY + int(poseRotation[1][2] * 100)), (255, 0, 0), 2)
+               
+            if output_overlay:
+                # draw x y z axis
+                # x axis
+                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][0] * 100), cY + int(poseRotation[1][0] * 100)), (0, 0, 255), 2)
+                # y axis
+                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][1] * 100), cY + int(poseRotation[1][1] * 100)), (0, 255, 0), 2)
+                # z axis
+                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][2] * 100), cY + int(poseRotation[1][2] * 100)), (255, 0, 0), 2)
 
             if show_graph:
-                # only if the id of the tag is 8, plot the 3D graph
-                if r.tag_id == 8:
+                # only if the id of the tag is equal to tag_id_to_track, plot the 3D graph
+                if r.tag_id == tag_id_to_track:
+                    axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
+                    plt.pause(0.01)
+                else if tag_id_to_track == -1:
                     axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
                     plt.pause(0.01)
 
@@ -160,15 +168,17 @@ while capture.isOpened():
 
         if show_framerate:
             end_time = time()
-            cv2.putText(inputImage, f"FPS: {1 / (end_time - start_time)}", (0, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+            print(f"Framerate: {1 / (end_time - start_time)})
+            if output_overlay:
+                cv2.putText(inputImage, f"FPS: {1 / (end_time - start_time)}", (0, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
 
-        if not show_graph:
+        if output_overlay:
             cv2.imshow("Image", inputImage)
         writer.write(inputImage)
 
         # Press Q on keyboard to  exit
-        if not show_graph:
+        if output_overlay:
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
 
