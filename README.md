@@ -32,6 +32,7 @@ To calibrate your camera, navigate to the `camera calibration` folder and run th
 
 After the images are created, run the `calibrate_camera.py` file in the `camera calibration` folder. While this is happening, a GUI should appear with lines and dots overlayed on top of input images. If you do not see this, there may be a problem with your calibration images and you should try generating them using the `generate_calibration_images.py` file. If you see the overlays on your images, wait for the interface to close. Afterwards, a `CameraCalibration.npz` file should have been created in the `camera calibration` folder.
 
+If you would like to use a gui or have your calabration images in a seprate folder you can use `calibrate_camera_gui.py`.
 # Use
 
 After calibrating your camera, you should be able to run `track_apriltags.py` in the main folder. This will display a camera feed and an overlay of the april tag tracking data.
