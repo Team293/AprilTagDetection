@@ -30,6 +30,8 @@ pip install -r requirements.txt
 
 To calibrate your camera, navigate to the `camera calibration` folder and run the `generate_calibration_images.py` file. Use the SPACE key to create 15 images for creating a camera profile. After 15 images are created (or the Q key is pressed) the GUI will close. Use the calibration board provided in `assets` for calibration images.
 
+After the images are created, run the `calibrate_camera.py` file in the `camera calibration` folder. While this is happening, a GUI should appear with lines and dots overlayed on top of input images. If you do not see this, there may be a problem with your calibration images and you should try generating them using the `generate_calibration_images.py` file. If you see the overlays on your images, wait for the interface to close. Afterwards, a `CameraCalibration.npz` file should have been created in the `camera calibration` folder.
+
 # Use
 
 After calibrating your camera, you should be able to run `track_apriltags.py` in the main folder. This will display a camera feed and an overlay of the april tag tracking data.
