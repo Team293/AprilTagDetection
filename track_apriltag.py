@@ -13,11 +13,13 @@ framerate = 30
 
 output_overlay = True
 output_file = 'vision output/test_output.mp4'
-undistort_frame = False
+undistort_frame = True
 
 show_graph = False
 debug_mode = False
 show_framerate = True
+error_threshold = 150
+tag_size = 6
 
 # Load camera parameters
 with np.load(camera_params) as file:
@@ -30,7 +32,7 @@ if webcam:
 else:
     capture = cv2.VideoCapture(video_source)
 
-# video_fps = capture.get(cv2.CAP_PROP_FPS),
+video_fps = capture.get(cv2.CAP_PROP_FPS),
 frame_height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 frame_width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
 
@@ -60,6 +62,51 @@ detector = Detector(
 if not capture.isOpened():
     print("Error opening video stream or file")
 
+
+def rotation_matrix(roll, pitch, yaw):
+    print(roll, pitch, yaw)
+    # create rotation matrix for roll, pitch, and yaw
+    R_x = roll
+    R_y = pitch
+    R_z = yaw
+
+    R = R_x @ R_y @ R_z
+    return R
+
+
+# create a function that draws a dot in 3d space from the camera
+def point_3d(x, y, z):
+    # converts the 3d point to a point in the camera
+    point_x = x * aprilCameraMatrix[0] / z + aprilCameraMatrix[2]
+    point_y = y * aprilCameraMatrix[1] / z + aprilCameraMatrix[3]
+    return int(point_x), int(point_y)
+
+
+def draw_3d_point(frame, point, color):
+    # draws a point in 3d space
+    point_x, point_y = point_3d(point[0], point[1], point[2])
+    cv2.circle(frame, (point_x, point_y), 5, color, -1)
+
+
+def draw_3d_line(frame, pt_a, pt_b, color):
+    a = point_3d(pt_a[0], pt_a[1], pt_a[2])
+    b = point_3d(pt_b[0], pt_b[1], pt_b[2])
+    cv2.line(frame, a, b, color, 2)
+
+
+def add_from_direction(tagPos, tagRotation, valueToAdd):
+    # add a value based on the direction of a tag
+    # print length of tag rotations
+    # apply the 3x3 rotation matrix to the vector
+    new_x = tagRotation[0][0] * valueToAdd[0] + tagRotation[0][1] * valueToAdd[1] + tagRotation[0][2] * valueToAdd[2]
+    new_y = tagRotation[1][0] * valueToAdd[0] + tagRotation[1][1] * valueToAdd[1] + tagRotation[1][2] * valueToAdd[2]
+    new_z = tagRotation[2][0] * valueToAdd[0] + tagRotation[2][1] * valueToAdd[1] + tagRotation[2][2] * valueToAdd[2]
+    new_x += tagPos[0]
+    new_y += tagPos[1]
+    new_z += tagPos[2]
+    return new_x, new_y, new_z
+
+
 # Read until video is completed
 while capture.isOpened():
     # Capture frame-by-frame
@@ -78,7 +125,7 @@ while capture.isOpened():
 
         if debug_mode:
             print("[INFO] detecting AprilTags...")
-        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=0.2032)
+        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=tag_size)
 
         # print(results)
         if debug_mode:
@@ -92,67 +139,65 @@ while capture.isOpened():
             writer.write(inputImage)
 
         for r in results:
-            # extract the bounding box (x, y)-coordinates for the AprilTag
-            # and convert each of the (x, y)-coordinate pairs to integers
-            (ptA, ptB, ptC, ptD) = r.corners
-            ptB = (int(ptB[0]), int(ptB[1]))
-            ptC = (int(ptC[0]), int(ptC[1]))
-            ptD = (int(ptD[0]), int(ptD[1]))
-            ptA = (int(ptA[0]), int(ptA[1]))
-            # draw the bounding box of the AprilTag detection
-            cv2.line(inputImage, ptA, ptB, (0, 255, 0), 2)
-            cv2.line(inputImage, ptB, ptC, (0, 255, 0), 2)
-            cv2.line(inputImage, ptC, ptD, (0, 255, 0), 2)
-            cv2.line(inputImage, ptD, ptA, (0, 255, 0), 2)
+            if debug_mode:
+                print(r)
 
-            cv2.circle(inputImage, ptA, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptB, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptC, 4, (0, 0, 255), -1)
-            cv2.circle(inputImage, ptD, 4, (0, 0, 255), -1)
-            # draw the center (x, y)-coordinates of the AprilTag
-            (cX, cY) = (int(r.center[0]), int(r.center[1]))
-            cv2.circle(inputImage, (cX, cY), 5, (0, 0, 255), -1)
-            # draw the tag family on the image
-            tagFamily = r.tag_family.decode("utf-8")
-            cv2.putText(inputImage, tagFamily, (ptD[0], ptD[1] - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            if r.tag_id > 8:
+                continue
 
-            x_centered = cX - frame_width / 2
-            y_centered = -1 * (cY - frame_height / 2)
+            if r.decision_margin < error_threshold:
+                continue
 
-            cv2.putText(inputImage, f"Center X coord: {x_centered}", (ptB[0] + 10, ptB[1] - 20),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+            # should be the size of the tag in the camera
+            cube_size = tag_size
+            cube_color = (0, 0, 0)
+            vertex_color = (120, 100, 0)
 
-            cv2.putText(inputImage, f"Center Y coord: {y_centered}", (ptB[0] + 10, ptB[1]),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+            tag_position = (r.pose_t[0][0], r.pose_t[1][0], r.pose_t[2][0])
+            tag_rotation = r.pose_R
 
-            cv2.putText(inputImage, f"Tag ID: {r.tag_id}", (ptC[0] - 70, ptC[1] - 15),
-                        cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
+            # get the center of the tag
+            center_x, center_y = point_3d(tag_position[0], tag_position[1], tag_position[2])
 
-            cv2.circle(inputImage, (int((frame_width / 2)), int((frame_height / 2))), 5, (0, 0, 255), 2)
+            # find the corners of the tag, based on the direction of the tag
+            pointA = add_from_direction(tag_position, tag_rotation, (-cube_size / 2, cube_size / 2, 0))
+            pointB = add_from_direction(tag_position, tag_rotation, (cube_size / 2, cube_size / 2, 0))
+            pointC = add_from_direction(tag_position, tag_rotation, (cube_size / 2, -cube_size / 2, 0))
+            pointD = add_from_direction(tag_position, tag_rotation, (-cube_size / 2, -cube_size / 2, 0))
 
-            # pose = detector.detection_pose(detection=r, camera_params=aprilCameraMatrix, tag_size=8)
-            poseRotation = r.pose_R
-            poseTranslation = r.pose_t
+            # create the top of the cube
+            pointE = add_from_direction(tag_position, tag_rotation, (-cube_size / 2, cube_size / 2, -cube_size))
+            pointF = add_from_direction(tag_position, tag_rotation, (cube_size / 2, cube_size / 2, -cube_size))
+            pointG = add_from_direction(tag_position, tag_rotation, (cube_size / 2, -cube_size / 2, -cube_size))
+            pointH = add_from_direction(tag_position, tag_rotation, (-cube_size / 2, -cube_size / 2, -cube_size))
+
+            # draw the line of the cube
+            draw_3d_line(inputImage, pointA, pointB, cube_color)
+            draw_3d_line(inputImage, pointB, pointC, cube_color)
+            draw_3d_line(inputImage, pointC, pointD, cube_color)
+            draw_3d_line(inputImage, pointD, pointA, cube_color)
+
+            draw_3d_line(inputImage, pointE, pointF, cube_color)
+            draw_3d_line(inputImage, pointF, pointG, cube_color)
+            draw_3d_line(inputImage, pointG, pointH, cube_color)
+            draw_3d_line(inputImage, pointH, pointE, cube_color)
+
+            draw_3d_line(inputImage, pointA, pointE, cube_color)
+            draw_3d_line(inputImage, pointB, pointF, cube_color)
+            draw_3d_line(inputImage, pointC, pointG, cube_color)
+            draw_3d_line(inputImage, pointD, pointH, cube_color)
+
+            # display the tag ID of the cube
+            cv2.putText(inputImage, f"#{r.tag_id}", (center_x - 15, center_y + 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
             if debug_mode:
-                print(f"[DATA] Detection rotation matrix:\n{poseRotation}")
-                print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
-                # print(f"[DATA] Apriltag position:\n{}")
-
-            # draw x y z axis
-            # x axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][0] * 100), cY + int(poseRotation[1][0] * 100)), (0, 0, 255), 2)
-            # y axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][1] * 100), cY + int(poseRotation[1][1] * 100)), (0, 255, 0), 2)
-            # z axis
-            cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][2] * 100), cY + int(poseRotation[1][2] * 100)), (255, 0, 0), 2)
+                print(f"[DATA] Detection rotation matrix:\n{tag_rotation}")
+                print(f"[DATA] Detection translation matrix:\n{tag_position}")
 
             if show_graph:
-                # only if the id of the tag is 8, plot the 3D graph
-                if r.tag_id == 8:
-                    axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
-                    plt.pause(0.01)
+                axes.scatter(tag_position[0], tag_position[1], tag_position[2])
+                plt.pause(0.01)
 
         if debug_mode:
             # show the output image after AprilTag detection
