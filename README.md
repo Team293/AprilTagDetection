@@ -24,11 +24,9 @@ sudo apt-get install python-tk
 sudo apt-get install python3-pil.imagetk
 ```
 
-When installing on a Raspberry Pi 3B using Raspberry Pi OS, some difficult challenges occured during installation, related to not having necessary packages. To solve this, the following commands were run:
+When installing on a Raspberry Pi 3B using Raspberry Pi OS, some difficult challenges occured during installation, related to not having necessary packages and proccessor architecture (the rpi3b uses ARM7/8). The following commands were run instead:
 
 ```
-pip install --upgrade pip setuptools wheel
+sudo apt-get install build-essential cmake pkg-config libjpeg-dev libtiff5-dev libjasper-dev libpng-dev libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libfontconfig1-dev libcairo2-dev libgdk-pixbuf2.0-dev libpango1.0-dev libgtk2.0-dev libgtk-3-dev libatlas-base-dev gfortran libhdf5-dev libhdf5-serial-dev libhdf5-103 python3-pyqt5 python3-dev
 ```
-```
-pip install python-opencv
-```
+A better guid can be found [here](https://raspberrypi-guide.github.io/programming/install-opencv).
