@@ -11,12 +11,13 @@ webcam = True
 video_source = 'Testing_apriltag.mp4'
 framerate = 30
 
-output_overlay = True
+output_overlay = False
 output_file = 'vision output/test_output.mp4'
 undistort_frame = False
 
 show_graph = False
-tag_id_to_track = 8 # any id of tag, use -1 for all tags.
+tag_id_to_track = -1 # any id of tag, use -1 for all tags.
+error_threshold = 130
 debug_mode = False
 show_framerate = True
 
@@ -93,6 +94,10 @@ while capture.isOpened():
             writer.write(inputImage)
 
         for r in results:
+
+            if r.decision_margin < error_threshold:
+                continue
+
             # get tag family
             tagFamily = r.tag_family.decode("utf-8")
             
@@ -144,23 +149,24 @@ while capture.isOpened():
                 print(f"[DATA] Detection translation matrix:\n{poseTranslation}")
                 # print(f"[DATA] Apriltag position:\n{}")
                
-            if output_overlay:
+            # if output_overlay:
                 # draw x y z axis
                 # x axis
-                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][0] * 100), cY + int(poseRotation[1][0] * 100)), (0, 0, 255), 2)
+                # cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][0] * 100), cY + int(poseRotation[1][0] * 100)), (0, 0, 255), 2)
                 # y axis
-                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][1] * 100), cY + int(poseRotation[1][1] * 100)), (0, 255, 0), 2)
+                # cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][1] * 100), cY + int(poseRotation[1][1] * 100)), (0, 255, 0), 2)
                 # z axis
-                cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][2] * 100), cY + int(poseRotation[1][2] * 100)), (255, 0, 0), 2)
+                # cv2.line(inputImage, (cX, cY), (cX + int(poseRotation[0][2] * 100), cY + int(poseRotation[1][2] * 100)), (255, 0, 0), 2)
 
             if show_graph:
                 # only if the id of the tag is equal to tag_id_to_track, plot the 3D graph
                 if r.tag_id == tag_id_to_track:
                     axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
                     plt.pause(0.01)
-                else if tag_id_to_track == -1:
-                    axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
-                    plt.pause(0.01)
+                else:
+                    if tag_id_to_track == -1:
+                        axes.scatter(poseTranslation[0][0], poseTranslation[1][0], poseTranslation[2][0])
+                        plt.pause(0.01)
 
         if debug_mode:
             # show the output image after AprilTag detection
@@ -168,7 +174,7 @@ while capture.isOpened():
 
         if show_framerate:
             end_time = time()
-            print(f"Framerate: {1 / (end_time - start_time)})
+            print(f"Framerate: {1 / (end_time - start_time)}")
             if output_overlay:
                 cv2.putText(inputImage, f"FPS: {1 / (end_time - start_time)}", (0, 30),
                             cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
