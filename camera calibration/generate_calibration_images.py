@@ -17,7 +17,7 @@ while True:
     cv.imshow('frame', frame)
     # if space is pressed, save the image
     if cv.waitKey(1) & 0xFF == ord(' '):
-        cv.imwrite(f'calibration images/camera_calibration_{amt:0>3}.jpg', frame)
+        cv.imwrite(f'camera_calibration_{amt:0>3}.jpg', frame)
         amt += 1
     # if q is pressed, quit the program
     if cv.waitKey(1) & 0xFF == ord('q'):
