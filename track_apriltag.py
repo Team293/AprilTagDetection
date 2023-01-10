@@ -21,6 +21,47 @@ SHOW_FRAMERATE = True
 ERROR_THRESHOLD = 150
 TAG_SIZE = 6
 
+# x, y, z, pitch yaw, roll
+WORLD_TAG_LOCATIONS = [
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0],
+    [0, -18, 0, 0, 0, 0],
+]
+
+
+# takes input pitch yaw and roll in degrees and converts it to a rotation matrix
+def euler_matrix(pitch, yaw, roll):
+    # convert from degrees to radians
+    pitch = np.radians(pitch)
+    yaw = np.radians(yaw)
+    roll = np.radians(roll)
+
+    # create the rotation matrix
+    rotation_matrix = np.array([
+        [
+            np.cos(yaw) * np.cos(pitch),
+            np.cos(yaw) * np.sin(pitch) * np.sin(roll) - np.sin(yaw) * np.cos(roll),
+            np.cos(yaw) * np.sin(pitch) * np.cos(roll) + np.sin(yaw) * np.sin(roll)
+        ],
+        [
+            np.sin(yaw) * np.cos(pitch),
+            np.sin(yaw) * np.sin(pitch) * np.sin(roll) + np.cos(yaw) * np.cos(roll),
+            np.sin(yaw) * np.sin(pitch) * np.cos(roll) - np.cos(yaw) * np.sin(roll)
+        ],
+        [
+            -np.sin(pitch),
+            np.cos(pitch) * np.sin(roll),
+            np.cos(pitch) * np.cos(roll)
+        ]
+    ])
+    return rotation_matrix
+
+
 # Load camera parameters
 with np.load(CAMERA_PARAMS) as file:
     cameraMatrix, dist, rvecs, tvecs = [file[i] for i in ('cameraMatrix', 'dist', 'rvecs', 'tvecs')]
@@ -71,6 +112,19 @@ def point_3d(x, y, z):
     return int(point_x), int(point_y)
 
 
+def add_from_direction(tagPos, tagRotation, valueToAdd):
+    # add a value based on the direction of a tag
+    # print length of tag rotations
+    # apply the 3x3 rotation matrix to the vector
+    new_x = tagRotation[0][0] * valueToAdd[0] + tagRotation[0][1] * valueToAdd[1] + tagRotation[0][2] * valueToAdd[2]
+    new_y = tagRotation[1][0] * valueToAdd[0] + tagRotation[1][1] * valueToAdd[1] + tagRotation[1][2] * valueToAdd[2]
+    new_z = tagRotation[2][0] * valueToAdd[0] + tagRotation[2][1] * valueToAdd[1] + tagRotation[2][2] * valueToAdd[2]
+    new_x += tagPos[0]
+    new_y += tagPos[1]
+    new_z += tagPos[2]
+    return new_x, new_y, new_z
+
+
 def draw_3d_point(frame, point, color):
     # draws a point in 3d space
     point_x, point_y = point_3d(point[0], point[1], point[2])
@@ -83,17 +137,29 @@ def draw_3d_line(frame, pt_a, pt_b, color):
     cv2.line(frame, a, b, color, 2)
 
 
-def add_from_direction(tagPos, tagRotation, valueToAdd):
-    # add a value based on the direction of a tag
-    # print length of tag rotations
-    # apply the 3x3 rotation matrix to the vector
-    new_x = tagRotation[0][0] * valueToAdd[0] + tagRotation[0][1] * valueToAdd[1] + tagRotation[0][2] * valueToAdd[2]
-    new_y = tagRotation[1][0] * valueToAdd[0] + tagRotation[1][1] * valueToAdd[1] + tagRotation[1][2] * valueToAdd[2]
-    new_z = tagRotation[2][0] * valueToAdd[0] + tagRotation[2][1] * valueToAdd[1] + tagRotation[2][2] * valueToAdd[2]
-    new_x += tagPos[0]
-    new_y += tagPos[1]
-    new_z += tagPos[2]
-    return new_x, new_y, new_z
+def point_from_camera(frame, point, color, camera_pos, camera_rot):
+    # find the point in 3d space
+    point = add_from_direction(camera_pos, camera_rot, point)
+    # draw the point
+    return point
+
+
+def draw_point_from_camera(frame, point, color, camera_pos, camera_rot):
+    # find the point in 3d space
+    point = point_from_camera(frame, point, color, camera_pos, camera_rot)
+    # draw the point
+    draw_3d_point(frame, point, color)
+
+
+def draw_line_from_camera(frame, pt_a, pt_b, camera_pos, camera_rot, color):
+    # find the point in 3d space
+    # invert rotation matrix
+    camera_rot = np.linalg.inv(camera_rot)
+    pt_a = point_from_camera(frame, pt_a, color, camera_pos, camera_rot)
+    pt_b = point_from_camera(frame, pt_b, color, camera_pos, camera_rot)
+    # draw the point
+    print(pt_a, pt_b)
+    draw_3d_line(frame, pt_a, pt_b, color)
 
 
 # Read until video is completed
@@ -128,6 +194,7 @@ while capture.isOpened():
             writer.write(inputImage)
 
         camera_positions = []
+        camera_rotations = []
 
         for r in results:
             if DEBUG_MODE:
@@ -181,7 +248,18 @@ while capture.isOpened():
 
             # invert the tag position to get camera position from tag
             camera_pos = (-tag_position[0], -tag_position[1], -tag_position[2])
-            print(f"Camera position: {camera_pos}")
+
+            if tag_id <= 8:
+                world_tag = WORLD_TAG_LOCATIONS[tag_id - 1]
+                # create a rotation matrix from roll pitch yaw
+                world_tag_rotation_matrix = euler_matrix(world_tag[3], world_tag[4], world_tag[5])
+                # get the camera position in the world
+                camera_pos = add_from_direction((world_tag[0], world_tag[1], world_tag[2]), world_tag_rotation_matrix, camera_pos)
+                # inverse the tag rotation
+                camera_rot = np.linalg.inv(tag_rotation)
+                # print(f"Camera position: {camera_pos}")
+                camera_rotations.append(camera_rot)
+                camera_positions.append(camera_pos)
 
             # display the tag ID of the cube
             cv2.putText(inputImage, f"#{r.tag_id}", (center_x - 15, center_y + 15),
@@ -191,9 +269,33 @@ while capture.isOpened():
                 print(f"[DATA] Detection rotation matrix:\n{tag_rotation}")
                 print(f"[DATA] Detection translation matrix:\n{tag_position}")
 
+            # if SHOW_GRAPH:
+            #     axes.scatter(camera_pos[0], camera_pos[1], camera_pos[2])
+            #     plt.pause(0.1)
+
+        # get the average of all the camera positions
+        if len(camera_positions) > 0:
+            camera_pos = np.average(camera_positions, axis=0)
+            camera_rot = np.average(camera_rotations, axis=0)
+            print(f"Average camera position: {camera_pos}")
             if SHOW_GRAPH:
-                axes.scatter(camera_pos[0], camera_pos[1], camera_pos[2])
+                axes.scatter(-camera_pos[0], camera_pos[1], -camera_pos[2])
                 plt.pause(0.1)
+
+            # draw a dot at the origin
+            # draw_3d_point(inputImage, (-camera_pos[0], camera_pos[1], -camera_pos[2]), (0, 0, 255))
+            # draw lines for the x, y, z axes
+            origin = (0, 0, 0)
+            x_axis = (15, 0, 0)
+            y_axis = (0, 15, 0)
+            z_axis = (0, 0, 15)
+
+            # draw the x-axis
+            draw_line_from_camera(inputImage, origin, x_axis, camera_pos, camera_rot, (0, 0, 255))
+            # draw the y-axis
+            draw_line_from_camera(inputImage, origin, y_axis, camera_pos, camera_rot, (0, 255, 0))
+            # draw the z-axis
+            draw_line_from_camera(inputImage, origin, z_axis, camera_pos, camera_rot, (255, 0, 0))
 
         if DEBUG_MODE:
             # show the output image after AprilTag detection
