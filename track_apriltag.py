@@ -22,6 +22,8 @@ ERROR_THRESHOLD = 150
 TAG_SIZE = 6
 
 # x, y, z, pitch yaw, roll
+# WORLD_TAG_LOCATIONS must be specified, and are unique to each setup
+# units are in inches
 WORLD_TAG_LOCATIONS = [
     [0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0],
