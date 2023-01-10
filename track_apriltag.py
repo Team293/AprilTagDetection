@@ -5,42 +5,42 @@ import matplotlib.pyplot as plt
 from time import time
 
 # Edit these variables for config.
-camera_params = 'camera calibration/CameraCalibration.npz'
-webcam = True
+CAMERA_PARAMS = 'camera calibration/CameraCalibration.npz'
+WEBCAM = True
 
-video_source = 'Testing_apriltag.mp4'
-framerate = 30
+VIDEO_SOURCE = 'Testing_apriltag.mp4'
+FRAMERATE = 30
 
-output_overlay = True
-output_file = 'vision output/test_output.mp4'
-undistort_frame = True
+OUTPUT_OVERLAY = True
+OUTPUT_FILE = 'vision output/test_output.mp4'
+CAMERA_WARP_FIX = True
 
-show_graph = False
-debug_mode = False
-show_framerate = True
-error_threshold = 150
-tag_size = 6
+SHOW_GRAPH = False
+DEBUG_MODE = False
+SHOW_FRAMERATE = True
+ERROR_THRESHOLD = 150
+TAG_SIZE = 6
 
 # Load camera parameters
-with np.load(camera_params) as file:
+with np.load(CAMERA_PARAMS) as file:
     cameraMatrix, dist, rvecs, tvecs = [file[i] for i in ('cameraMatrix', 'dist', 'rvecs', 'tvecs')]
 
 aprilCameraMatrix = [cameraMatrix[0][0], cameraMatrix[1][1], cameraMatrix[0][2], cameraMatrix[1][2]]
 
-if webcam:
+if WEBCAM:
     capture = cv2.VideoCapture(0)
 else:
-    capture = cv2.VideoCapture(video_source)
+    capture = cv2.VideoCapture(VIDEO_SOURCE)
 
 video_fps = capture.get(cv2.CAP_PROP_FPS),
 frame_height = capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
 frame_width = capture.get(cv2.CAP_PROP_FRAME_WIDTH)
 
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-writer = cv2.VideoWriter(output_file, apiPreference=0, fourcc=fourcc, fps=framerate,
+writer = cv2.VideoWriter(OUTPUT_FILE, apiPreference=0, fourcc=fourcc, fps=FRAMERATE,
                          frameSize=(int(frame_width), int(frame_height)))
 
-if show_graph:
+if SHOW_GRAPH:
     fig = plt.figure()
     axes = plt.axes(projection='3d')
     axes.set_title("3D scatterplot", pad=25, size=15)
@@ -51,8 +51,8 @@ if show_graph:
 # detector options
 detector = Detector(
     families='tag16h5',
-    nthreads=2,
-    quad_decimate=1.0,
+    nthreads=5,
+    quad_decimate=2.0,
     quad_sigma=3.0,
     decode_sharpening=1.0,
     refine_edges=3,
@@ -105,40 +105,42 @@ while capture.isOpened():
 
         inputImage = frame
 
-        if undistort_frame:
+        if CAMERA_WARP_FIX:
             height, width = inputImage.shape[:2]
             newCameraMatrix, _ = cv2.getOptimalNewCameraMatrix(cameraMatrix, dist, (width, height), 1, (width, height))
             inputImage = cv2.undistort(inputImage, cameraMatrix, dist, None, newCameraMatrix)
 
         image = cv2.cvtColor(inputImage, cv2.COLOR_BGR2GRAY)
 
-        if debug_mode:
+        if DEBUG_MODE:
             print("[INFO] detecting AprilTags...")
-        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=tag_size)
+        results = detector.detect(image, estimate_tag_pose=True, camera_params=aprilCameraMatrix, tag_size=TAG_SIZE)
 
         # print(results)
-        if debug_mode:
+        if DEBUG_MODE:
             print(f"[INFO] {len(results)} total AprilTags detected")
             print(f"[INFO] Looping over {len(results)} apriltags and getting data")
 
         # loop over the AprilTag detection results
         if len(results) == 0:
-            if not show_graph:
+            if not SHOW_GRAPH:
                 cv2.imshow("Image", inputImage)
             writer.write(inputImage)
 
+        camera_positions = []
+
         for r in results:
-            if debug_mode:
+            if DEBUG_MODE:
                 print(r)
 
             if r.tag_id > 8:
                 continue
 
-            if r.decision_margin < error_threshold:
+            if r.decision_margin < ERROR_THRESHOLD:
                 continue
 
             # should be the size of the tag in the camera
-            cube_size = tag_size
+            cube_size = TAG_SIZE
             cube_color = (0, 0, 0)
             vertex_color = (120, 100, 0)
 
@@ -185,32 +187,31 @@ while capture.isOpened():
             cv2.putText(inputImage, f"#{r.tag_id}", (center_x - 15, center_y + 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
 
-            if debug_mode:
+            if DEBUG_MODE:
                 print(f"[DATA] Detection rotation matrix:\n{tag_rotation}")
                 print(f"[DATA] Detection translation matrix:\n{tag_position}")
 
-            if show_graph:
+            if SHOW_GRAPH:
                 axes.scatter(camera_pos[0], camera_pos[1], camera_pos[2])
                 plt.pause(0.1)
 
-        if debug_mode:
+        if DEBUG_MODE:
             # show the output image after AprilTag detection
             print("[INFO] displaying image after overlay")
 
-        if show_framerate:
+        if SHOW_FRAMERATE:
             end_time = time()
             cv2.putText(inputImage, f"FPS: {1 / (end_time - start_time)}", (0, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 255, 0), 2)
 
-        if not show_graph:
+        if not SHOW_GRAPH:
             cv2.imshow("Image", inputImage)
         writer.write(inputImage)
 
         # Press Q on keyboard to  exit
-        if not show_graph:
+        if not SHOW_GRAPH:
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
-
 
     # Break the loop
     else:
@@ -221,5 +222,5 @@ while capture.isOpened():
 # save the output video to disk
 writer.release()
 capture.release()
-if show_graph:
+if SHOW_GRAPH:
     plt.show()
