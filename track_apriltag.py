@@ -48,11 +48,11 @@ if show_graph:
     axes.set_ylabel("Y")
     axes.set_zlabel("Z")
 
-# options = DetectorOptions(families="tag36h11")
+# detector options
 detector = Detector(
     families='tag16h5',
-    nthreads=3,
-    quad_decimate=2.0,
+    nthreads=2,
+    quad_decimate=1.0,
     quad_sigma=3.0,
     decode_sharpening=1.0,
     refine_edges=3,
@@ -61,17 +61,6 @@ detector = Detector(
 # Check if camera opened successfully
 if not capture.isOpened():
     print("Error opening video stream or file")
-
-
-def rotation_matrix(roll, pitch, yaw):
-    print(roll, pitch, yaw)
-    # create rotation matrix for roll, pitch, and yaw
-    R_x = roll
-    R_y = pitch
-    R_z = yaw
-
-    R = R_x @ R_y @ R_z
-    return R
 
 
 # create a function that draws a dot in 3d space from the camera
@@ -155,6 +144,7 @@ while capture.isOpened():
 
             tag_position = (r.pose_t[0][0], r.pose_t[1][0], r.pose_t[2][0])
             tag_rotation = r.pose_R
+            tag_id = r.tag_id
 
             # get the center of the tag
             center_x, center_y = point_3d(tag_position[0], tag_position[1], tag_position[2])
@@ -187,6 +177,10 @@ while capture.isOpened():
             draw_3d_line(inputImage, pointC, pointG, cube_color)
             draw_3d_line(inputImage, pointD, pointH, cube_color)
 
+            # invert the tag position to get camera position from tag
+            camera_pos = (-tag_position[0], -tag_position[1], -tag_position[2])
+            print(f"Camera position: {camera_pos}")
+
             # display the tag ID of the cube
             cv2.putText(inputImage, f"#{r.tag_id}", (center_x - 15, center_y + 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
@@ -196,8 +190,8 @@ while capture.isOpened():
                 print(f"[DATA] Detection translation matrix:\n{tag_position}")
 
             if show_graph:
-                axes.scatter(tag_position[0], tag_position[1], tag_position[2])
-                plt.pause(0.01)
+                axes.scatter(camera_pos[0], camera_pos[1], camera_pos[2])
+                plt.pause(0.1)
 
         if debug_mode:
             # show the output image after AprilTag detection
