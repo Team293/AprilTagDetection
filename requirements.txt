@@ -3,4 +3,4 @@ dt-apriltags
 numpy
 matplotlib
 customtkinter
-Pillow
+pillow
